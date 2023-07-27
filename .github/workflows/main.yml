@@ -1,0 +1,197 @@
+name: gpyt-eventbus build
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - master
+  pull_request:
+    branches:
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+      - master
+      - develop
+
+jobs:
+  sort:
+    runs-on: ubuntu-latest
+    name: run isort
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run nox
+        run: poetry run nox -s isort
+
+  black:
+    runs-on: ubuntu-latest
+    name: run black
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run nox
+        run: poetry run nox -s black
+
+  flake8:
+    runs-on: ubuntu-latest
+    name: run flake8
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run flake8
+        run: poetry run nox -s flake8
+
+  pylint:
+    runs-on: ubuntu-latest
+    name: run pylint
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run pylint
+        run: poetry run nox -s pylint
+
+  mypy:
+    runs-on: ubuntu-latest
+    name: run mypy
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run mypy
+        run: poetry run nox -s mypy
+
+  bandit:
+    runs-on: ubuntu-latest
+    name: run bandit
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run bandit
+        run: poetry run nox -s bandit
+
+  tests:
+    runs-on: ubuntu-latest
+    name: run tests
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run tests
+        run: poetry run nox -s tests
+
+  coverage:
+    runs-on: ubuntu-latest
+    name: run coverage
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - name: install poetry
+        run: python -m pip install poetry
+      - name: poetry install
+        run: poetry install
+      - name: run coverage
+        run: poetry run nox -s coverage
+
+  build:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    name: build and publish
+    if: ${{ always() && github.ref == 'refs/heads/master' && contains(join(needs.*.result, ','), 'success') }}
+    needs:
+      - sort
+      - black
+      - flake8
+      - pylint
+      - mypy
+      - bandit
+      - tests
+      - coverage
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - name: install poetry
+      run: python -m pip install poetry
+
+    - name: run build
+      run: poetry build
+
+    - name: tag
+      run: echo "tag=$(poetry version | cut -d ' ' -f 2)" >> $GITHUB_OUTPUT
+      id: tag
+
+    - name: filename
+      run: echo "filename=$(basename ./dist/*.whl)" >> $GITHUB_OUTPUT
+      id: filename
+
+    - name: create github release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: ./dist/${{ steps.filename.outputs.filename }}
+        bodyFile: "CHANGELOG.md"
+        tag: ${{ steps.tag.outputs.tag }}
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+  pypi:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    name: publish to pypi
+    if: ${{ always() && github.ref == 'refs/heads/master' && contains(join(needs.*.result, ','), 'success') }}
+    needs:
+      - build
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - name: install poetry
+      run: python -m pip install poetry
+
+    - name: configure poetry pypi
+      # run: poetry config repositories.pypi https://upload.pypi.org/legacy/  # uncomment this line to publish to pypi
+      run: poetry config repositories.pypi https://test.pypi.org/legacy/  # comment this line to publish to pypi
+
+    - name: publish to pypi
+      run: poetry publish -r pypi --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }} --build
+
+  docker:
+    runs-on: ubuntu-latest
+    if: ${{ always() && github.ref == 'refs/heads/master' && contains(join(needs.*.result, ','), 'success') }}
+    needs:
+      - pypi
+      - build
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: docker build . --tag pcp1976/ocellicode-gpyt-eventbus:${{ needs.build.outputs.tag }}
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+    - name: Push the Docker image to the registry
+      run: docker push pcp1976/ocellicode-gpyt-eventbus:${{ needs.build.outputs.tag }}
