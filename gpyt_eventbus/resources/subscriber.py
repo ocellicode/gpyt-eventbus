@@ -16,8 +16,8 @@ class Subscriber(Resource):
         self.logger.trace(f"Request json: {request_json}")
         try:
             return SubscriberORM(**request_json)
-        except ValidationError as validation_error:
-            self.handle_error(validation_error)
+        except (ValidationError, TypeError) as validation_error:
+            self.handle_invalid_request(validation_error)
 
     def persist_subscriber(self, subscriber: SubscriberORM):
         new_subscriber = SubscriberORM(**subscriber.dict())
@@ -29,11 +29,11 @@ class Subscriber(Resource):
         return {"message": "Subscriber not found"}, 404
 
     @staticmethod
-    def handle_invalid_request():
-        return {"message": "Invalid request"}, 400
+    def handle_invalid_request(error):
+        return {"message": f"Invalid request: {error}"}, 400
 
     def handle_error(self, error):
-        self.logger.error(f"Error: {error}")
+        self.logger.error(f"Error: {type(error)}")
         return {"message": "Error"}, 500
 
     def post(self):
@@ -52,8 +52,19 @@ class Subscriber(Resource):
         except Exception as exception:  # pylint: disable=broad-except
             return self.handle_error(exception)
 
-    def get(self):
-        """
-        Get all subscribers
-        """
-        return {"message": "Subscribers retrieved successfully"}, 200
+    def delete(self):
+        request_json = request.get_json(force=True)
+        self.logger.trace(f"Request json: {request_json}")
+        # use session to retrieve subscriber, if not found return 404
+
+        try:
+            subscriber_model = (
+                self.session.query(SubscriberORM).filter_by(**request_json).first()
+            )
+            if not subscriber_model:
+                return self.handle_not_found()
+            self.session.delete(subscriber_model)
+            self.session.commit()
+            return subscriber_model.dict(), 200
+        except Exception as exception:  # pylint: disable=broad-except
+            return self.handle_error(exception)
