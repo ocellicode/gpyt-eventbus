@@ -30,7 +30,13 @@ class EventTestCase(unittest.TestCase):
         self.session.query.return_value.filter_by.return_value.first.return_value = None
         event_data = {
             "aggregate_id": "some_id",
-            "data": {},
+            "data": {
+                "some_key": "some_value",
+                "some_other_key": 1,
+                "some_other_other_key": True,
+                "some_other_other_other_key": ["some", "list"],
+                "some_other_other_other_other_key": {"some": "dict"},
+            },
             "meta_data": {},
             "timestamp": "2023-08-02 20:01:45.819383",
             "aggregate_name": "example",
