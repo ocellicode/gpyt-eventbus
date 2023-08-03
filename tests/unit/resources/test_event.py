@@ -56,7 +56,7 @@ class EventTestCase(unittest.TestCase):
 
         # Verify that the error message is returned
         response_data = response.get_json()
-        self.assertEqual(response_data, {'error': 'Missing aggregate_id or revision'})
+        self.assertEqual(response_data, {"error": "Missing aggregate_id or revision"})
 
         # Verify that the session methods were not called
         self.session.add.assert_not_called()
@@ -83,7 +83,12 @@ class EventTestCase(unittest.TestCase):
 
         # Verify that the error message is returned
         response_data = response.get_json()
-        self.assertEqual(response_data, {'error': 'Conflict. Event with same aggregate_id and revision already exists'})
+        self.assertEqual(
+            response_data,
+            {
+                "error": "Conflict. Event with same aggregate_id and revision already exists"
+            },
+        )
 
         # Verify that the session methods were not called
         self.session.add.assert_not_called()
