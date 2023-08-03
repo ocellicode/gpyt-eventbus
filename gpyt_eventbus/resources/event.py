@@ -1,11 +1,14 @@
 import datetime
 
+import backoff
+import requests
 from flask import request
 from flask_restful import Resource
 from pydantic.error_wrappers import ValidationError
 from sqlalchemy.orm import Session
 
 from gpyt_eventbus.model.event import Event as EventORM
+from gpyt_eventbus.model.subscriber import Subscriber as SubscriberORM
 
 
 class Event(Resource):
@@ -65,9 +68,18 @@ class Event(Resource):
 
             event = self.verify_request(request_json)
             self.persist_event(event)
-
+            self.publish_event(event)
             return {"message": "Event created successfully"}, 201
 
         except Exception as unknown_type:  # pylint: disable=broad-except
             self.logger.error(f"Error: {unknown_type}")
             return {"error": "An error occurred"}, 500
+
+    @backoff.on_exception(
+        backoff.expo, requests.exceptions.RequestException, max_time=60
+    )
+    def publish_event(self, event: EventORM):
+        subscribers = self.session.query(SubscriberORM).all()
+        for subscriber in subscribers:
+            requests.post(subscriber.url, json=event.dict(), timeout=5)
+            self.logger.info(f"Event published to {subscriber.url}")
