@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.0.2
+
+### Added
+
+- events endpoint added
+
 ## 0.0.1
 
 - Initial release
