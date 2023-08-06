@@ -1,5 +1,3 @@
-import datetime
-
 import backoff
 import requests
 from flask import request
@@ -7,6 +5,7 @@ from flask_restful import Resource
 from pydantic.error_wrappers import ValidationError
 from sqlalchemy.orm import Session
 
+from gpyt_eventbus.interface.result import Result
 from gpyt_eventbus.model.event import Event as EventORM
 from gpyt_eventbus.model.subscriber import Subscriber as SubscriberORM
 
@@ -18,14 +17,31 @@ class Event(Resource):
 
     def verify_request(self, request_json):
         self.logger.trace(f"Request json: {request_json}")
+        expected_keys = [
+            "aggregate_id",
+            "aggregate_name",
+            "revision",
+            "data",
+            "meta_data",
+        ]
+        for key in request_json.keys():
+            if key not in expected_keys + ["timestamp"]:
+                return Result.fail(
+                    self.handle_invalid_request(f"Unexpected key '{key}'")
+                )
+        if not all(key in request_json.keys() for key in expected_keys):
+            return Result.fail(
+                self.handle_invalid_request(f"Missing one or more of {expected_keys}")
+            )
         try:
-            return EventORM(**request_json)
+            return Result.ok(EventORM.from_dict(request_json))
         except (ValidationError, TypeError) as validation_error:
-            return self.handle_invalid_request(validation_error)
+            return Result.fail(self.handle_invalid_request(validation_error))
+        except KeyError as key_error:
+            return Result.fail(self.handle_invalid_request(f"{key_error} is missing"))
 
     def persist_event(self, event: EventORM):
-        new_event = EventORM(**event.dict())
-        self.session.add(new_event)
+        self.session.add(event)
         self.session.commit()
 
     @staticmethod
@@ -35,20 +51,16 @@ class Event(Resource):
     def post(self):
         try:
             request_json = request.get_json(force=True)
-            if "timestamp" in request_json:
-                request_json["timestamp"] = datetime.datetime.strptime(
-                    request_json.pop("timestamp"), "%Y-%m-%d %H:%M:%S.%f"
-                )
             self.logger.trace(f"Request json: {request_json}")
-            aggregate_id = request_json.get("aggregate_id")
-            revision = request_json.get("revision")
 
-            if not aggregate_id or revision is None:
-                return {"error": "Missing aggregate_id or revision"}, 400
-
+            event_result = self.verify_request(request_json)
+            if event_result.failure:
+                return event_result.error
+            else:
+                event = event_result.value
             existing_event = (
                 self.session.query(EventORM)
-                .filter_by(aggregate_id=aggregate_id, revision=revision)
+                .filter_by(aggregate_id=event.aggregate_id, revision=event.revision)
                 .first()
             )
             if existing_event:
@@ -56,17 +68,16 @@ class Event(Resource):
                     "error": "Conflict. Event with same aggregate_id and revision already exists"
                 }, 409
 
-            if revision > 0:
+            if event.revision > 0:
                 last_event = (
                     self.session.query(EventORM)
-                    .filter_by(aggregate_id=aggregate_id)
+                    .filter_by(aggregate_id=event.aggregate_id)
                     .order_by(EventORM.revision.desc())
                     .first()
                 )
-                if not last_event or last_event.revision != revision - 1:
+                if not last_event or last_event.revision != event.revision - 1:
                     return {"error": "Conflict. Invalid revision number"}, 409
 
-            event = self.verify_request(request_json)
             self.persist_event(event)
             self.publish_event(event)
             return {"message": "Event created successfully"}, 201

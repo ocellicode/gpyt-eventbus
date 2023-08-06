@@ -21,6 +21,26 @@ class EventTestCase(unittest.TestCase):
         )
         self.client = self.app.test_client()
 
+    def test_verify_request_raises_error(self):
+        event_data = {
+            "aggregate_id": "some_id",
+            "data": {
+                "some_key": "some_value",
+                "some_other_key": 1,
+                "some_other_other_key": True,
+                "some_other_other_other_key": ["some", "list"],
+                "some_other_other_other_other_key": {"some": "dict"},
+            },
+            "meta_data": {},
+            "revision": 0,
+            "some_other_key": "some_value",
+        }
+        event = Event(logger=logger, session=self.session)
+        result = event.verify_request(event_data)
+        response, code = result.error
+        assert code == 400
+        assert response == {"error": "Invalid request: Unexpected key 'some_other_key'"}
+
     def test_post_event_valid_request(self):
         self.session.query.return_value.filter_by.return_value.first.return_value = None
         event_data = {
@@ -50,13 +70,23 @@ class EventTestCase(unittest.TestCase):
         self.assertEqual(response_data, expected_response)
 
     def test_post_event_invalid_request(self):
-        event_data = {"invalid_key": "some_id"}
+        event_data = {
+            "data": {},
+            "timestamp": "2023-08-02 20:01:45.819383",
+            "aggregate_name": "example",
+            "revision": 0,
+        }
         response = self.client.post("/event", json=event_data)
         self.assertEqual(response.status_code, 400)
 
         # Verify that the error message is returned
         response_data = response.get_json()
-        self.assertEqual(response_data, {"error": "Missing aggregate_id or revision"})
+        self.assertEqual(
+            response_data,
+            {
+                "error": "Invalid request: Missing one or more of ['aggregate_id', 'aggregate_name', 'revision', 'data', 'meta_data']"
+            },
+        )
 
         # Verify that the session methods were not called
         self.session.add.assert_not_called()
