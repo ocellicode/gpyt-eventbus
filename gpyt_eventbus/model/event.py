@@ -18,6 +18,7 @@ class Event(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     aggregate_name = Column(String)
     revision = Column(Integer, default=0)
+    event_type = Column(String)
 
     def dict(self):
         return {
