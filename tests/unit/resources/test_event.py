@@ -55,7 +55,7 @@ class EventTestCase(unittest.TestCase):
             "meta_data": {},
             "timestamp": "2023-08-02 20:01:45.819383",
             "aggregate_name": "example",
-            "event_name": "example_event",
+            "event_type": "example_event",
             "revision": 0,
         }
         response = self.client.post("/event", json=event_data)
@@ -76,7 +76,7 @@ class EventTestCase(unittest.TestCase):
             "timestamp": "2023-08-02 20:01:45.819383",
             "aggregate_name": "example",
             "revision": 0,
-            "event_name": "example_event",
+            "event_type": "example_event",
         }
         response = self.client.post("/event", json=event_data)
         self.assertEqual(response.status_code, 400)
@@ -86,7 +86,7 @@ class EventTestCase(unittest.TestCase):
         self.assertEqual(
             response_data,
             {
-                "error": "Invalid request: Missing one or more of ['aggregate_id', 'aggregate_name', 'revision', 'data', 'meta_data', 'event_name']"
+                "error": "Invalid request: Missing one or more of ['aggregate_id', 'aggregate_name', 'revision', 'data', 'meta_data', 'event_type']"
             },
         )
 
@@ -108,7 +108,7 @@ class EventTestCase(unittest.TestCase):
             "meta_data": {},
             "timestamp": "2023-08-02 20:01:45.819383",
             "aggregate_name": "example",
-            "event_name": "example_event",
+            "event_type": "example_event",
             "revision": 0,
         }
         response = self.client.post("/event", json=event_data)

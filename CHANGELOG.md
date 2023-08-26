@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added `events` table migration for event_name column
+- Added `events` table migration for event_type column
 
 ## 0.0.4
 
