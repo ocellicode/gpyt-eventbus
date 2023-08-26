@@ -1,4 +1,9 @@
 # Change Log
+## 0.0.6
+
+### Modified
+
+- Updated validation to accept event_type
 
 ## 0.0.5
 
