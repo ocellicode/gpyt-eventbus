@@ -27,7 +27,6 @@ def upgrade():
             "timestamp",
             sa.DateTime(),
             nullable=False,
-            server_default=sa.func.utc_timestamp(),
         ),
         sa.Column("aggregate_name", sa.String(), nullable=True),
         sa.Column("revision", sa.Integer(), nullable=False, server_default="0"),
