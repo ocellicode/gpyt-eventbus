@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.0.5
+
+### Added
+
+- Added `events` table migration for event_name column
 
 ## 0.0.4
 
