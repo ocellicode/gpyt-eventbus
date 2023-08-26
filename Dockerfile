@@ -1,6 +1,6 @@
 FROM python:3.11
 
-ARG VERSION=0.0.2
+ARG VERSION=0.0.3
 ARG LABEL=${VERSION}
 
 RUN python3 -m pip install --extra-index-url https://test.pypi.org/simple/ gpyt_eventbus==${VERSION}

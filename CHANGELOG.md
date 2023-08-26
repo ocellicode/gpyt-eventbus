@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.0.3
+
+### Updated
+
+- Updated dependencies
+- Updated migrations to fix a bug where the `events` table was not created
+
 ## 0.0.2
 
 ### Added
