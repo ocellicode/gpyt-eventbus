@@ -1,5 +1,12 @@
 # Change Log
 
+
+## 0.0.4
+
+### Added
+
+- Actually merge in the `events` table migration!
+
 ## 0.0.3
 
 ### Updated
