@@ -23,7 +23,7 @@ class Event(Resource):
             "revision",
             "data",
             "meta_data",
-            "event_name"
+            "event_name",
         ]
         for key in request_json.keys():
             if key not in expected_keys + ["timestamp"]:
