@@ -1,4 +1,11 @@
 # Change Log
+
+## 0.0.7
+
+### Modified
+
+- Updated (de)serialization to include event_type
+
 ## 0.0.6
 
 ### Modified

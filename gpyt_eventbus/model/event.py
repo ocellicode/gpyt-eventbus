@@ -28,6 +28,7 @@ class Event(Base):
             "timestamp": str(self.timestamp),
             "aggregate_name": self.aggregate_name,
             "revision": self.revision,
+            "event_type": self.event_type,
         }
 
     @staticmethod
@@ -42,4 +43,5 @@ class Event(Base):
             )
         event.aggregate_name = event_dict["aggregate_name"]
         event.revision = event_dict["revision"]
+        event.event_type = event_dict["event_type"]
         return event
