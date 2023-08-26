@@ -1,10 +1,15 @@
 # Change Log
+## 0.0.6
+
+### Modified
+
+- Updated validation to accept event_type
 
 ## 0.0.5
 
 ### Added
 
-- Added `events` table migration for event_name column
+- Added `events` table migration for event_type column
 
 ## 0.0.4
 
